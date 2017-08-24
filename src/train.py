@@ -6,7 +6,7 @@ import torch.optim as optim
 
 train_args = {
 	'batch-size':64, 
-	'test-batch-size':1000, 
+	'test-batch-size':256, 
 	'epochs':150, 
 	'lr':0.01, 
 	'decreasing-lr':'80,120',

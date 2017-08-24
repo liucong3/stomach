@@ -31,28 +31,18 @@ def split_data_set(category_elems, splits):
 		for i in range(len(split)):
 			splitted_indexes[i] += elems[count : count + split[i]]
 			count += split[i]
-	# samplers
-	samplers = []
+	# samplers 
 	from torch.utils.data.sampler import SubsetRandomSampler
-	for i in range(len(splitted_indexes)):
-		samplers.append(SubsetRandomSampler(splitted_indexes[i]))
-	return samplers
-		
+	return = [SubsetRandomSampler(index) for index in splitted_indexes]
+
 def get_splits_uniform(category_elems, splits_p):
 	min_count = None
 	lens = [len(category_elems[c]) for c in category_elems]
 	min_count = min(lens)
-	split = []
-	total = 0
-	for i in range(len(splits_p)):
-		split.append(int(min_count * splits_p[i]))
-		total += split[-1]
-	split[-1] += min_count - total
+	split = [int(min_count * p) for p in splits_p]
+	split[-1] += min_count - sum(split)
 	print '  data_len:', lens, 'split:', split
-	splits = {}
-	for c in category_elems:
-		splits[c] = split
-	return splits
+	return = {c:split for c in category_elems}
 
 def get_category_info(data_set):
 	from misc import progress_bar
@@ -71,11 +61,7 @@ def get_data_loaders(args, image_path, splits_p, transforms):
 	category_elems = get_category_info(data_set)
 	splits = get_splits_uniform(category_elems, splits_p)
 	samplers = split_data_set(category_elems, splits)
-	loaders = []
-	for i in range(len(samplers)):
-		loader = DataLoader(data_set, batch_size=args.batch_size, sampler=samplers[i], **kwargs)
-		loaders.append(loader)
-	return loaders
+	return [DataLoader(data_set, batch_size=args.batch_size, sampler=s, **kwargs) for s in samplers]
 
 if __name__ == '__main__':
 	from cifar_main import parse_argument
