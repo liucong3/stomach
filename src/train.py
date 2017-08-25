@@ -3,6 +3,7 @@ import torch, os, time, misc
 import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.optim as optim
+from misc import progress_bar
 
 train_args = {
 	'batch-size':64, 
@@ -11,7 +12,7 @@ train_args = {
 	'lr':0.01, 
 	'decreasing-lr':'80,120',
 	'weight-decay':0.01, 
-	'momentum':0.9, 
+	'momentum':0.5, 
 	'gpu':0, 
 	'seed':1,
 	'log-interval':10,
@@ -44,6 +45,8 @@ def main(args, model, train_loader, test_loader, decreasing_lr=[], print=print):
 	except Exception as e:
 		import traceback
 		traceback.print_exc()
+	except KeyboardInterrupt:
+		exit()
 	finally:
 		print("Total Elapse: {:.2f}, Best Result: {:.3f}%".format(time.time()-info['t_begin'], info['best_acc']))
 
@@ -52,6 +55,7 @@ def train(args, model, optimizer, train_loader, info, print=print):
 	model.train()
 	if info['epoch'] in args.decreasing_lr:
 		optimizer.param_groups[0]['lr'] *= 0.1
+	msg = None
 	for batch_idx, (data, target) in enumerate(train_loader):
 		indx_target = target.clone()
 		if args.cuda:
@@ -68,16 +72,26 @@ def train(args, model, optimizer, train_loader, info, print=print):
 			pred = output.data.max(1)[1]  # get the index of the max log-probability
 			correct = pred.cpu().eq(indx_target).sum()
 			acc = correct * 1.0 / len(data)
-			print('Elapsed: {} Epoch: {} [{}/{}] Loss: {:.6f} Acc: {:.4f} lr: {:.2e}'.format(
-				misc.format_time(time.time() - info['t_begin']), info['epoch'], batch_idx * len(data), len(train_loader),
-				loss.data[0], acc, optimizer.param_groups[0]['lr']))
+			msg = 'Loss:{:.3f}/ACC:{:.3f}/lr:{:.5f}'.format(loss.data[0], acc, optimizer.param_groups[0]['lr'])
+			# print('Elapsed: {} Epoch: {} [{}/{}] Loss: {:.6f} Acc: {:.4f} lr: {:.2e}'.format(
+			# 	misc.format_time(time.time() - info['t_begin']), info['epoch'], batch_idx * len(data), len(train_loader),
+			# 	loss.data[0], acc, optimizer.param_groups[0]['lr']))
+		progress_bar(batch_idx, len(train_loader), msg)
+
+		# if batch_idx == 0:
+		# 	print(output)
+		# 	_, pred = output.data.max(1)
+		# 	print(pred.view(1,-1))
+		# 	print(target.data.view(1,-1))
 
 def eval(args, model, test_loader, info, print=print):
 	print('Eval ' + time.ctime())
 	model.eval()
 	test_loss = 0
 	correct = 0
+	data_count = 0
 	for data, target in test_loader:
+		data_count += data.size(0)
 		indx_target = target.clone()
 		if args.cuda:
 			data, target = data.cuda(), target.cuda()
@@ -88,9 +102,9 @@ def eval(args, model, test_loader, info, print=print):
 		correct += pred.cpu().eq(indx_target).sum()
 
 	test_loss = test_loss / len(test_loader) # average over number of mini-batch
-	acc = 100. * correct / len(test_loader)
+	acc = 100. * correct / data_count
 	print('\tTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(
-		test_loss, correct, len(test_loader), acc))
+		test_loss, correct, data_count, acc))
 	if acc > info['best_acc']:
 		new_file = os.path.join(args.logdir, 'best-{}.pth'.format(info['epoch']))
 		misc.save_model(model, new_file, old_file=info['old_file'], verbose=True)

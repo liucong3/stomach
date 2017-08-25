@@ -10,7 +10,7 @@ import numpy as np
 
 def image_data_set(args, image_path):
 	transform = transforms.Compose(
-		[transforms.Scale(args.image_size), # transforms.Scale((360,310))
+		[transforms.Scale(args.image_size), # transforms.Scale((256,256))
 		transforms.RandomCrop(args.image_size), 
 		transforms.ToTensor(),
 	 	transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -33,7 +33,7 @@ def split_data_set(category_elems, splits):
 			count += split[i]
 	# samplers 
 	from torch.utils.data.sampler import SubsetRandomSampler
-	return = [SubsetRandomSampler(index) for index in splitted_indexes]
+	return [SubsetRandomSampler(index) for index in splitted_indexes]
 
 def get_splits_uniform(category_elems, splits_p):
 	min_count = None
@@ -42,7 +42,7 @@ def get_splits_uniform(category_elems, splits_p):
 	split = [int(min_count * p) for p in splits_p]
 	split[-1] += min_count - sum(split)
 	print '  data_len:', lens, 'split:', split
-	return = {c:split for c in category_elems}
+	return {c:split for c in category_elems}
 
 def get_category_info(data_set):
 	from misc import progress_bar
@@ -56,6 +56,7 @@ def get_category_info(data_set):
 	return category_elems
 
 def get_data_loaders(args, image_path, splits_p, transforms):
+	print('Loading data ...')
 	kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 	data_set = image_data_set(args, image_path)
 	category_elems = get_category_info(data_set)
@@ -76,14 +77,16 @@ if __name__ == '__main__':
 	trans = [train_transform, None, None]
 	train_loader, eval_loader, test_loader = get_data_loaders(args, image_path, splits_p, trans)
 
-	print('len(train_loader)', len(train_loader))
-	print('len(eval_loader)', len(eval_loader))
-	print('len(test_loader)', len(test_loader))
+	def inspect_data(loader):
+		images, labels = iter(loader).next()
+		print labels.view(1,-1)
+		print('images.size()', images.size())
+		img = torchvision.utils.make_grid(images)
+		npimg = img.numpy()
+		plt.imshow(np.transpose(npimg, (1, 2, 0)))
+		plt.show()
 
-	images, labels = iter(train_loader).next()
-	print('images.size()', images.size())
-	img = torchvision.utils.make_grid(images)
-	npimg = img.numpy()
-	plt.imshow(np.transpose(npimg, (1, 2, 0)))
-	plt.show()
+	inspect_data(train_loader)
+	inspect_data(eval_loader)
+	inspect_data(test_loader)
 

@@ -8,15 +8,15 @@ def make_layers(cfg, batch_norm=False):
 		if v == 'M':
 			layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
 		else:
-			if  isinstance(v, tuple):
+			if isinstance(v, (tuple, list)):
 				out_channels, kernel_size, padding = v
 			else:
-				out_channels, kernel_size, padding = v[0], 3, 1
+				out_channels, kernel_size, padding = v, 3, 1
 			conv2d = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=padding)
 			if batch_norm:
 				layers += [conv2d, nn.BatchNorm2d(out_channels, affine=False), nn.ReLU()]
 			else:
-				layers += [conv2d, nn.ReLU()]
+				layers += [conv2d, nn.Dropout(0.5), nn.ReLU()]
 			in_channels = out_channels
 	return nn.Sequential(*layers)
 
@@ -44,12 +44,12 @@ class LocConvNet(nn.Module):
 
 	def __init__(self, args):
 		nn.Module.__init__(self)
-		cfg = [(128, 5, 2), 'M', (64, 5, 2), 'M', (32, 5, 2), 'M', (16, 5, 2), 'M', (8, 5, 2), 'M']
-		self.features = make_layers(cfg)
-		image_size = args.image_size / pow(2, 5)
-		output_size = image_size * image_size * 8
+		# The size of the input image is clipped to (3, 256, 256)
+		features = 128
+		cfg = [features, 'M'] * 8
+		self.features = make_layers(cfg, batch_norm=False)
 		self.classifier = nn.Sequential(
-			nn.Linear(output_size, args.num_classes)
+			nn.Linear(features, args.num_classes)
 		)
 		# print(self.features)
 		# print(self.classifier)

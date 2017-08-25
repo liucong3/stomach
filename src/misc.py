@@ -51,17 +51,17 @@ def init_params(net):
 	for m in net.modules():
 		if isinstance(m, nn.Conv2d):
 			init.kaiming_normal(m.weight, mode='fan_out')
-			if m.bias:
+			if not m.bias is None:
 				init.constant(m.bias, 0)
 		elif isinstance(m, nn.BatchNorm2d):
 			init.constant(m.weight, 1)
 			init.constant(m.bias, 0)
 		elif isinstance(m, nn.Linear):
 			init.normal(m.weight, std=1e-3)
-			if m.bias:
+			if not m.bias is None:
 				init.constant(m.bias, 0)
 
-def format_time(seconds):
+def format_time(seconds, with_ms=False):
 	days = int(seconds / 3600/24)
 	seconds = seconds - days*3600*24
 	hours = int(seconds / 3600)
@@ -78,7 +78,7 @@ def format_time(seconds):
 	if hours > 0:
 		f += str(hours) + ':'
 	f += str(minutes) + '.' + str(secondsf)
-	if millis > 0:
+	if with_ms and millis > 0:
 		f += '_' + str(millis)
 	return f
 				
@@ -116,7 +116,8 @@ def progress_bar(current, total, msg=None):
 	last_len = cur_len
 
 	L = []
-	L.append(' Time:%s' % format_time(tot_time))
+	est_time = tot_time / (current + 1) * total
+	L.append(' Time:%s/Est:%s' % (format_time(tot_time), format_time(est_time)))
 	if msg:
 		L.append(' | ' + msg)
 

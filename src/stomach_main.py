@@ -3,16 +3,21 @@ from __future__ import print_function
 
 if __name__ == '__main__':
 	from cifar_main import parse_argument
-	arguments={'image-size':256, 'num_classes':4, 'batch-size':16}
+	arguments={
+		'image-size':256, 
+		'num_classes':4, 
+		'batch-size':32, 
+		'lr':0.002, 
+		'gpu':1}
 	args = parse_argument(additional_arguments=arguments, description='Location classification for stomach images.')
 	import misc
 	misc.ensure_dir(args.logdir)
 	logger = misc.Logger(args.logdir, 'train_log')
 	print = logger.info
-	print("=================FLAGS==================")
+	print("-----------------FLAGS-----------------")
 	for k, v in args.__dict__.items():
 		print('{}: {}'.format(k, v))
-	print("========================================")
+	print("---------------------------------------\n")
 
 	image_path='Data/Normal'
 	splits_p=[0.9, 0.1]
@@ -27,6 +32,7 @@ if __name__ == '__main__':
 	train_loader, test_loader = get_data_loaders(args, image_path, splits_p, trans)
 	from models import LocConvNet
 	model = LocConvNet(args)
+	misc.init_params(model)
 	import train
 	train.main(args, model, train_loader, test_loader, print=logger.info)
 
