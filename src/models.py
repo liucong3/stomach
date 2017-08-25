@@ -1,7 +1,7 @@
 
 import torch, torch.nn as nn
 
-def make_layers(cfg, batch_norm=False):
+def make_layers(cfg, batch_norm=False, dropout=0):
 	layers = []
 	in_channels = 3
 	for i, v in enumerate(cfg):
@@ -13,10 +13,12 @@ def make_layers(cfg, batch_norm=False):
 			else:
 				out_channels, kernel_size, padding = v, 3, 1
 			conv2d = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=padding)
+			layers = [conv2d]
 			if batch_norm:
-				layers += [conv2d, nn.BatchNorm2d(out_channels, affine=False), nn.ReLU()]
-			else:
-				layers += [conv2d, nn.Dropout(0.5), nn.ReLU()]
+				layers.append(nn.BatchNorm2d(out_channels, affine=False))
+			layers.append(nn.ReLU())
+			if dropout > 0 and dropout < 1:
+				layers.append(nn.Dropout(dropout))
 			in_channels = out_channels
 	return nn.Sequential(*layers)
 
@@ -47,7 +49,7 @@ class LocConvNet(nn.Module):
 		# The size of the input image is clipped to (3, 256, 256)
 		features = 128
 		cfg = [features, 'M'] * 8
-		self.features = make_layers(cfg, batch_norm=False)
+		self.features = make_layers(cfg, args.batch_norm, args.dropout)
 		self.classifier = nn.Sequential(
 			nn.Linear(features, args.num_classes)
 		)

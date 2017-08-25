@@ -11,6 +11,7 @@ train_args = {
 	'epochs':150, 
 	'lr':0.01, 
 	'decreasing-lr':'80,120',
+	'lr-decreasing-rate':0.5,
 	'weight-decay':0.01, 
 	'momentum':0.5, 
 	'gpu':0, 
@@ -18,6 +19,8 @@ train_args = {
 	'log-interval':10,
 	'test-interval':1,
 	'logdir':'log',
+	'batch-norm':True,
+	'dropout':0.5,
 }
 
 def main(args, model, train_loader, test_loader, decreasing_lr=[], print=print):
@@ -51,10 +54,10 @@ def main(args, model, train_loader, test_loader, decreasing_lr=[], print=print):
 		print("Total Elapse: {:.2f}, Best Result: {:.3f}%".format(time.time()-info['t_begin'], info['best_acc']))
 
 def train(args, model, optimizer, train_loader, info, print=print):
-	print('Train ' + time.ctime())
+	print('Epoch %d - %s' % (info['epoch'], time.ctime()))
 	model.train()
 	if info['epoch'] in args.decreasing_lr:
-		optimizer.param_groups[0]['lr'] *= 0.1
+		optimizer.param_groups[0]['lr'] *= args.lr_decreasing_rate
 	msg = None
 	for batch_idx, (data, target) in enumerate(train_loader):
 		indx_target = target.clone()
@@ -85,12 +88,12 @@ def train(args, model, optimizer, train_loader, info, print=print):
 		# 	print(target.data.view(1,-1))
 
 def eval(args, model, test_loader, info, print=print):
-	print('Eval ' + time.ctime())
+	print('Eval - ' + time.ctime())
 	model.eval()
 	test_loss = 0
 	correct = 0
 	data_count = 0
-	for data, target in test_loader:
+	for batch_idx, (data, target) in enumerate(test_loader):
 		data_count += data.size(0)
 		indx_target = target.clone()
 		if args.cuda:
@@ -100,10 +103,11 @@ def eval(args, model, test_loader, info, print=print):
 		test_loss += F.cross_entropy(output, target).data[0]
 		pred = output.data.max(1)[1]  # get the index of the max log-probability
 		correct += pred.cpu().eq(indx_target).sum()
+		progress_bar(batch_idx, len(test_loader))
 
 	test_loss = test_loss / len(test_loader) # average over number of mini-batch
 	acc = 100. * correct / data_count
-	print('\tTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(
+	print('\tAverage loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(
 		test_loss, correct, data_count, acc))
 	if acc > info['best_acc']:
 		new_file = os.path.join(args.logdir, 'best-{}.pth'.format(info['epoch']))

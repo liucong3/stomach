@@ -54,8 +54,9 @@ def init_params(net):
 			if not m.bias is None:
 				init.constant(m.bias, 0)
 		elif isinstance(m, nn.BatchNorm2d):
-			init.constant(m.weight, 1)
-			init.constant(m.bias, 0)
+			if not m.weight is None:
+				init.constant(m.weight, 1)
+				init.constant(m.bias, 0)
 		elif isinstance(m, nn.Linear):
 			init.normal(m.weight, std=1e-3)
 			if not m.bias is None:
