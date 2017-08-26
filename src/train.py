@@ -1,8 +1,8 @@
 from __future__ import print_function
-import torch, os, time, misc
-import torch.nn.functional as F
-from torch.autograd import Variable
-import torch.optim as optim
+
+import os, time, torch.nn.functional as F
+import torch.optim as optim, torch.autograd import Variable
+import misc
 from misc import progress_bar
 
 train_args = {

@@ -1,19 +1,13 @@
 #!/usr/bin/python
 
-import torch
-import torchvision
-from torchvision.datasets import ImageFolder
-import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
-import numpy as np
-
 def image_data_set(args, image_path):
+	import torchvision.transforms as transforms
 	transform = transforms.Compose(
 		[transforms.Scale(args.image_size), # transforms.Scale((256,256))
 		transforms.RandomCrop(args.image_size), 
 		transforms.ToTensor(),
 	 	transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+	from torchvision.datasets import ImageFolder
 	return ImageFolder(root=image_path, transform=transform)
 
 def split_data_set(category_elems, splits):
@@ -24,9 +18,7 @@ def split_data_set(category_elems, splits):
 		elems = [elems[i] for i in torch.randperm(len(elems))]
 		split = splits[category]
 		if splitted_indexes is None:
-			splitted_indexes = []
-			for i in range(len(split)):
-				splitted_indexes.append([])
+			splitted_indexes = [[] for _ in range(len(split)]
 		count = 0
 		for i in range(len(split)):
 			splitted_indexes[i] += elems[count : count + split[i]]
@@ -62,6 +54,7 @@ def get_data_loaders(args, image_path, splits_p, transforms):
 	category_elems = get_category_info(data_set)
 	splits = get_splits_uniform(category_elems, splits_p)
 	samplers = split_data_set(category_elems, splits)
+	from torch.utils.data import DataLoader
 	return [DataLoader(data_set, batch_size=args.batch_size, sampler=s, **kwargs) for s in samplers]
 
 if __name__ == '__main__':
@@ -69,6 +62,7 @@ if __name__ == '__main__':
 	args = parse_argument(additional_arguments={'image-size':256, 'num_classes':4})
 	image_path='Data/Normal'
 	splits_p=[0.8, 0.1, 0.1]
+	import torchvision.transforms as transforms
 	train_transform = transforms.Compose([
 		transforms.Pad(args.image_size // 8),
 		transforms.RandomCrop(args.image_size),
@@ -77,13 +71,14 @@ if __name__ == '__main__':
 	trans = [train_transform, None, None]
 	train_loader, eval_loader, test_loader = get_data_loaders(args, image_path, splits_p, trans)
 
+	import numpy, torchvision, matplotlib.pyplot as plt
 	def inspect_data(loader):
 		images, labels = iter(loader).next()
 		print labels.view(1,-1)
 		print('images.size()', images.size())
 		img = torchvision.utils.make_grid(images)
 		npimg = img.numpy()
-		plt.imshow(np.transpose(npimg, (1, 2, 0)))
+		plt.imshow(numpy.transpose(npimg, (1, 2, 0)))
 		plt.show()
 
 	inspect_data(train_loader)

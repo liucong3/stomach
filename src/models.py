@@ -1,5 +1,5 @@
 
-import torch, torch.nn as nn
+import torch.nn as nn
 
 def make_layers(cfg, batch_norm=False, dropout=0):
 	layers = []

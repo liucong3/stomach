@@ -1,5 +1,5 @@
 
-import os, sys, time, math, torch, torch.nn as nn, torch.nn.init as init
+import os, torch
 
 def ensure_dir(path, erase=False):
 	import shutil
@@ -47,7 +47,8 @@ def save_model(model, new_file, old_file=None, verbose=False):
 	torch.save(state_dict, new_file)
 
 def init_params(net):
-	'''Init layer parameters.'''
+	import torch.nn as nn
+	import torch.nn.init as init
 	for m in net.modules():
 		if isinstance(m, nn.Conv2d):
 			init.kaiming_normal(m.weight, mode='fan_out')
@@ -89,6 +90,7 @@ _, term_width = os.popen('stty size', 'r').read().split()
 term_width = int(term_width)
 
 TOTAL_BAR_LENGTH = 60.
+import time
 last_time = time.time()
 begin_time = last_time
 last_len = -1
@@ -104,6 +106,7 @@ def progress_bar(current, total, msg=None):
 	if last_len == cur_len and current < total - 1 and cur_time - last_time < 1 and msg is None:
 		return
 
+	import sys
 	sys.stdout.write(' [')
 	for i in range(cur_len):
 		sys.stdout.write('=')
