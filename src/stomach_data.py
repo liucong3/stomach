@@ -50,11 +50,28 @@ def get_category_info(data_set):
 def get_data_loaders(args, image_path, splits_p, transforms):
 	print('Loading data ...')
 	kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+	# Read data from folder 'image_path'
+	# The 'data_set' is a list of tuple: (image, image_category), 
+	# where 'image' is a RGB image and 'image_category' is the label of the image, which ranges from 0-3
 	data_set = image_data_set(args, image_path)
+	# 'category_elems' is a dict whose keys are the four integer labels (categories) and
+	# 	whose values are the indexes of the images belonging to each category.
+	# For example category_elems[2] = [0, 3, 10, ...] if image #0, #3, #10, ... have label 2 (belong to categery 2)
 	category_elems = get_category_info(data_set)
+	# 'splits_p' specifies the how to split the data.
+	# For example, if splits_p is [0.8, 0.1, 0.1], the data will be splitted into 3 parts, 
+	# 	the first part will contain 80% of the data, the second part contains 10%, etc.
+	# 'splits' is a dict, where for each category c splits[c] is a list of len(splits_p), 
+	#	and splits[c][0] is the number of elements in the first part for category c.
 	splits = get_splits_uniform(category_elems, splits_p)
+	# 'samplers' is a list of torch.utils.data.sampler.SubsetRandomSampler, each sampler will be use to control
+	#	how a DataLoader read data from the 'data_set'.
+	# Specifically, the i-th sampler samples from 'data_set' only those data in splits[c][i], for any c.
+	# For instances if 'splits_p' in the previous function is [0.8, 0.1, 0.1],
+	#	samplers[0] smaples 80% of data in 'data_set', and samplers[1] samples another 10% of data in 'data_set', etc.
 	samplers = split_data_set(category_elems, splits)
 	from torch.utils.data import DataLoader
+	# Build DataLoader's using 'samplers'
 	return [DataLoader(data_set, batch_size=args.batch_size, sampler=s, **kwargs) for s in samplers]
 
 if __name__ == '__main__':
