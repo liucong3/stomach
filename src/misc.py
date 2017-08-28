@@ -123,7 +123,7 @@ def progress_bar(current, total, msg=None):
 	est_time = tot_time / (current + 1) * total
 	L.append(' Time:%s/Est:%s' % (format_time(tot_time), format_time(est_time)))
 	if msg:
-		L.append(' | ' + msg)
+		L.append(' ' + msg)
 
 	msg = ''.join(L)
 	sys.stdout.write(msg)

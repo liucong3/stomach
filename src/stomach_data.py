@@ -10,23 +10,6 @@ def image_data_set(args, image_path):
 	from torchvision.datasets import ImageFolder
 	return ImageFolder(root=image_path, transform=transform)
 
-def split_data_set(category_elems, splits):
-	# indexes
-	splitted_indexes = None
-	for category in category_elems:
-		elems = category_elems[category]
-		elems = [elems[i] for i in torch.randperm(len(elems))]
-		split = splits[category]
-		if splitted_indexes is None:
-			splitted_indexes = [[] for _ in range(len(split)]
-		count = 0
-		for i in range(len(split)):
-			splitted_indexes[i] += elems[count : count + split[i]]
-			count += split[i]
-	# samplers 
-	from torch.utils.data.sampler import SubsetRandomSampler
-	return [SubsetRandomSampler(index) for index in splitted_indexes]
-
 def get_splits_uniform(category_elems, splits_p):
 	min_count = None
 	lens = [len(category_elems[c]) for c in category_elems]
@@ -47,34 +30,78 @@ def get_category_info(data_set):
 		progress_bar(i, len(data_set))
 	return category_elems
 
+def split_data_set(category_elems, splits):
+	import torch
+	splitted_indexes = None
+	for category in category_elems:
+		elems = category_elems[category]
+		elems = [elems[i] for i in torch.randperm(len(elems))]
+		split = splits[category]
+		if splitted_indexes is None:
+			splitted_indexes = [[] for _ in range(len(split))]
+		count = 0
+		for i in range(len(split)):
+			splitted_indexes[i] += elems[count : count + split[i]]
+			count += split[i]
+	return splitted_indexes
+	# samplers 
+
 def get_data_loaders(args, image_path, splits_p, transforms):
 	print('Loading data ...')
 	kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+
 	# Read data from folder 'image_path'
 	# The 'data_set' is a list of tuples: (image, image_category), 
 	# where 'image' is an RGB image and 'image_category' is the label of the image, which ranges from 0-3
 	data_set = image_data_set(args, image_path)
+
 	# 'category_elems' is a dict whose keys are the four integer labels (categories) and
 	# 	whose values are the indexes of the images belonging to each category.
 	# For example category_elems[2] = [0, 3, 10, ...], if images #0, #3, #10, ... have label 2 (belong to categery 2)
 	category_elems = get_category_info(data_set)
+	# TEST
+	# allelem = []
+	# for c in category_elems:
+	# 	allelem += category_elems[c]
+	# 	print c, len(category_elems[c]), len(set(category_elems[c]))
+	# print len(set(allelem))
+	# exit
+
 	# 'splits_p' specifies the how to split the data.
 	# For example, if splits_p is [0.8, 0.1, 0.1], the data will be splitted into 3 parts, 
 	# 	the first part contains 80% of the data, the second part contains 10%, etc.
 	# 'splits' is a dict, where for each category c splits[c] is a list of size 'len(splits_p)', 
 	#	and splits[c][0] is the number of elements in the first splitted part of category c.
 	splits = get_splits_uniform(category_elems, splits_p)
+	# TEST
+	# for c in splits:
+	# 	print c, splits[c]
+	# exit()
+
 	# 'samplers' is a list object of type 'torch.utils.data.sampler.SubsetRandomSampler', 
 	#	each sampler will be use to control how a DataLoader reads data from the 'data_set'.
 	# Specifically, the i-th sampler samples from 'data_set' only those data in splits[c][i] for any c.
 	# For instances if 'splits_p' in the previous function is [0.8, 0.1, 0.1],
 	#	samplers[0] smaples 80% of data in 'data_set', and samplers[1] samples another 10% of data in 'data_set', etc.
-	samplers = split_data_set(category_elems, splits)
+	splitted_indexes = split_data_set(category_elems, splits)
+	# TEST
+	# allelem = []
+	# for s in splitted_indexes:
+	# 	allelem += s
+	# 	print len(s), len(set(s))
+	# s = allelem
+	# print len(s), len(set(s))
+	# exit()
+
+	from torch.utils.data.sampler import SubsetRandomSampler
+	samplers = [SubsetRandomSampler(index) for index in splitted_indexes]
+
 	# Build DataLoader's using 'samplers'
 	from torch.utils.data import DataLoader
 	return [DataLoader(data_set, batch_size=args.batch_size, sampler=s, **kwargs) for s in samplers]
 
 if __name__ == '__main__':
+	
 	from cifar_main import parse_argument
 	args = parse_argument(additional_arguments={'image-size':256, 'num_classes':4})
 	image_path='Data/Normal'
@@ -101,4 +128,5 @@ if __name__ == '__main__':
 	inspect_data(train_loader)
 	inspect_data(eval_loader)
 	inspect_data(test_loader)
+	
 
